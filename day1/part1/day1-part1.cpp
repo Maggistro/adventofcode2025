@@ -3,7 +3,7 @@
 #include <string>
 
 int main() {
-    std::ifstream in("data");
+    std::ifstream in("../data");
 
     std::string line;
     int position = 50;
@@ -17,7 +17,7 @@ int main() {
         distance = std::stoi(line.substr(1));
         position += direction * distance;
 
-        std::cout << "Current position: " << position << "Current command: " << line << std::endl;
+        // std::cout << "Current position: " << position << "Current command: " << line << std::endl;
 
         if (position >= 100)
         {
