@@ -1,16 +1,94 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <vector> 
+#include <algorithm>
 
+using std::vector;
 using std::string;
 
-long long buildID(string start)
+bool isPrime(int number)
+{
+    double maxDenominator = sqrt(number);
+    int denominator = 2;
+    do
+    {
+        if (number % denominator == 0)
+        {
+            return false;
+        }
+
+        denominator++;
+        if (denominator % 2 == 0)
+        {
+            denominator++;
+        }
+
+    } while (denominator <= maxDenominator);
+
+    return true;
+}
+
+/**
+ * Numbers can now have multiple centers. We need to calculate all common denominators.
+ * E.g. a number with length 12 would have 2x6, 3x4, 4x3 and 6x2 blocks available
+ *
+ * 32 34 15 25
+ * 32 32 32 32 => ignore
+ * 32 34 32 34
+ * 
+ * 32 35 15 25
+ * 32 32 32 32 => ignore
+ * 32 35 32 35
+ * 
+ * ...
+ * 
+ * 35 34 15 25  
+ * 35 35 35 35
+ * 35 34 35 34
+ * 
+ * 35 35 15 25
+ * 35 35 35 35 => ignore from before
+ * 35 35 35 35 => ignore from before x 2
+ * 
+ * */ 
+vector<long long> buildID(string start)
 {
     long long startID = std::stoll(start);
-    long long secondHalf = startID / pow(10,  start.length() / 2);
-    long long firstHalf = secondHalf * pow(10, start.length() / 2);
+    vector<long long> tempIds; // max 32 ids per number
+    int blockSize = 0;
 
-    return firstHalf + secondHalf;
+    for (int currentDenominator = 2; currentDenominator <= start.length(); currentDenominator++)
+    {
+        int idStorageIndex = 0;
+        if (start.length() % currentDenominator != 0)
+        {
+            continue;
+        }
+
+        blockSize = start.length() / currentDenominator;
+
+        long long id = 0;
+        long long block = 0;
+        
+        for (int i = 0; i < currentDenominator; i++)
+        {
+            if (i == 0)
+            {
+                block = startID / pow(10,  start.length() - blockSize);
+            }
+
+            id += block * pow(10, i * blockSize);
+        }
+        
+        tempIds.push_back(id);
+        idStorageIndex++;
+    }
+
+    sort( tempIds.begin(), tempIds.end() );
+    tempIds.erase( unique( tempIds.begin(), tempIds.end() ), tempIds.end() );
+
+    return tempIds;
 }
 
 int main() {
@@ -25,7 +103,7 @@ int main() {
     long long id = 0;
     long long idSum = 0;
 
-    std::ifstream in("../test");
+    std::ifstream in("../data");
     getline(in, line);
 
     do
@@ -39,33 +117,43 @@ int main() {
         while (std::stoll(start) <= std::stoll(end))
         {
 
-            // if number has a odd length, only single digits are valid
-            if (start.length() % 2 == 1)
+            // if length is prime, only single digits are valid
+            if (isPrime(start.length()))
             {
                 char first = start[0];
-                start = string(start.length(), first);
-                id = std::stoll(start);
+                id = std::stoll(string(start.length(), first));
                 
-
                 if (id <= std::stoll(end) && id >= std::stoll(start))
                 {
                     std::cout << "  ID: " << id << "; ";
                     idSum += id;
                 }
-                
-                start = std::to_string(id + static_cast<long long>(pow(10, start.length() - 1)));
+
+                if (first == '9')
+                {
+                    start = std::to_string(static_cast<long long>(pow(10, start.length())));
+                }
+                else
+                {
+                    start = std::to_string(id + static_cast<long long>(pow(10, start.length() - 1)));
+                }
             }
             else
             {
-                id = buildID(start);
+                vector<long long> ids = buildID(start);
 
-                if (id <= std::stoll(end) && id >= std::stoll(start))
+                for (int i = 0; i < ids.size(); i++)
                 {
-                    std::cout << "  ID: " << id << "; ";
-                    idSum += id;
+                    id = ids[i];
+
+                    if (id <= std::stoll(end) && id >= std::stoll(start))
+                    {
+                        std::cout << "  ID: " << id << "; ";
+                        idSum += id;
+                    }                    
                 }
-                
-                start = std::to_string(id + static_cast<long long>(pow(10, start.length() / 2)));
+
+                start = std::to_string(std::stoll(start) + static_cast<long long>(pow(10, start.length() / 2)));
             }
 
         }
