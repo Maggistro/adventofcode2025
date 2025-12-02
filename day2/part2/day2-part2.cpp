@@ -3,6 +3,7 @@
 #include <cmath>
 #include <vector> 
 #include <algorithm>
+#include <set>
 
 using std::vector;
 using std::string;
@@ -100,6 +101,8 @@ int main() {
     string start;
     string end;
 
+    std::set<long long> uniqueIDs;
+
     long long id = 0;
     long long idSum = 0;
 
@@ -126,7 +129,7 @@ int main() {
                 if (id <= std::stoll(end) && id >= std::stoll(start))
                 {
                     std::cout << "  ID: " << id << "; ";
-                    idSum += id;
+                    uniqueIDs.insert(id);
                 }
 
                 if (first == '9')
@@ -148,21 +151,33 @@ int main() {
 
                     if (id <= std::stoll(end) && id >= std::stoll(start))
                     {
+                        if (uniqueIDs.find(id) != uniqueIDs.end()) {
+                            continue;
+                        }
                         std::cout << "  ID: " << id << "; ";
-                        idSum += id;
+                        uniqueIDs.insert(id);
                     }                    
                 }
 
                 start = std::to_string(std::stoll(start) + static_cast<long long>(pow(10, start.length() / 2)));
             }
-
         }
+            
 
         lastDelimiter = currentDelimiter + 1;
         // std::cout << "Token: " << token << " Start: " << start << " End: " << end << std::endl;
     } while (currentDelimiter != string::npos);
 
+    for (long long uniqueID : uniqueIDs) {
+        idSum += uniqueID;
+    }
+    uniqueIDs.erase(uniqueIDs.begin(), uniqueIDs.end());
+
     std::cout << "\r\nID Sum: " << idSum << std::endl;
 
     return 0;
 }
+
+//73962950345
+
+//59316147926
