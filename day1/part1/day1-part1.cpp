@@ -1,11 +1,12 @@
 #include <iostream>
 #include <fstream>
-#include <string>
+
+using std::string;
 
 int main() {
     std::ifstream in("../data");
 
-    std::string line;
+    string line;
     int position = 50;
     int direction = 0; // -1 for left, 1 for right
     int distance = 0;
