@@ -119,8 +119,14 @@ int main() {
     
         while (std::stoll(start) <= std::stoll(end))
         {
+            // skip single digits
+            if (start.length() == 1)
+            {
+                start = std::to_string(static_cast<long long>(pow(10, start.length())));
+                continue;
+            }
 
-            // if length is prime, only single digits are valid
+            // if length is prime, only repeated digits are valid
             if (isPrime(start.length()))
             {
                 char first = start[0];
@@ -159,7 +165,7 @@ int main() {
                     }                    
                 }
 
-                start = std::to_string(std::stoll(start) + static_cast<long long>(pow(10, start.length() / 2)));
+                start = std::to_string(static_cast<long long>(std::floor(std::stoll(start) / pow(10, start.length() / 2) + 1) * pow(10, start.length() / 2)));
             }
         }
             
@@ -171,7 +177,7 @@ int main() {
     for (long long uniqueID : uniqueIDs) {
         idSum += uniqueID;
     }
-    uniqueIDs.erase(uniqueIDs.begin(), uniqueIDs.end());
+    // uniqueIDs.erase(uniqueIDs.begin(), uniqueIDs.end());
 
     std::cout << "\r\nID Sum: " << idSum << std::endl;
 
@@ -179,5 +185,8 @@ int main() {
 }
 
 //73962950345
+
+//59316147882
+//59316147882
 
 //59316147926
