@@ -46,7 +46,6 @@ int main() {
             }
             // ascii value for '@' is 64, ascii value for '.' is 46
             // => 64*3 + 46*5 = 422 is maximuma allowed value for surrounding 8 positions
-            // => 64*1 + 46*7 = 386 is minimum allowed value for surrounding 8 positions
             surrounding =
                 buffer[position - lengthWithRim - 1] +
                 buffer[position - lengthWithRim] +
