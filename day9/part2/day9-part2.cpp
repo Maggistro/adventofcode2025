@@ -12,54 +12,20 @@ struct PreviousPosition
     bool yBottom = false;
     bool xRight = false;
     bool yTop = false;
+    std::pair<int, int> lastPoint;
 };
-
-std::pair<int, int> buildArea(std::pair<int, int> currentPosition, std::vector<std::pair<int, int>>& cornerPoints, std::vector<std::pair<int, int>>& points)
-{
-    std::set<std::pair<int, int>> rimPoints;
-    int distance = INT_MAX;
-
-    std::pair<int, int> nextPoint = std::make_pair(0,0);
-    std::pair<int, int> lastPoint = *(cornerPoints.end() - 2);
-    for(auto& point : points) {
-        if (point == lastPoint || point == currentPosition) {
-            continue;
-        }
-
-        // Optimize
-        if (point.first == currentPosition.first) {
-            int distanceY = std::abs(currentPosition.second - point.second);
-            if (distanceY < distance) {
-                distance = distanceY;
-                nextPoint = point;
-            }
-        }
-
-        if (point.second == currentPosition.second) {
-            int distanceX = std::abs(currentPosition.first - point.first);
-            if (distanceX < distance) {
-                distance = distanceX;
-                nextPoint = point;
-            }
-        }
-    }
-
-    cornerPoints.push_back(nextPoint);
-
-    return nextPoint;
-}
 
 bool isFilled(std::pair<int, int> firstPoint, std::pair<int, int> secondPoint, std::vector<std::pair<int, int>>& cornerPoints)
 {
     PreviousPosition prevPos;
+    prevPos.lastPoint = cornerPoints.end()[-1];
+
+    // prevPos.xLeft = firstPoint.first < secondPoint.first;
+    // prevPos.xRight = firstPoint.first > secondPoint.first;
+    // prevPos.yBottom = firstPoint.second < secondPoint.second;
+    // prevPos.yTop = firstPoint.second > secondPoint.second;
+
     for (auto& point : cornerPoints) {
-        if (point == firstPoint || point == secondPoint) {
-            prevPos.xRight = false;
-            prevPos.yTop = false;
-            prevPos.xLeft = false;
-            prevPos.yBottom = false;
-            continue;
-        }
 
         // completely inside
         if (point.first > std::min(firstPoint.first, secondPoint.first)
@@ -69,29 +35,54 @@ bool isFilled(std::pair<int, int> firstPoint, std::pair<int, int> secondPoint, s
             return false;
         }
 
+        // passed through on y axis
+        if (point.first > std::min(firstPoint.first, secondPoint.first)
+            && point.first < std::max(firstPoint.first, secondPoint.first))
+        {
+            if ((prevPos.lastPoint.second <= std::min(firstPoint.second, secondPoint.second)
+            && point.second >= std::max(firstPoint.second, secondPoint.second))
+            || (point.second <= std::min(firstPoint.second, secondPoint.second)
+            && prevPos.lastPoint.second >= std::max(firstPoint.second, secondPoint.second))) {
+                return false;
+            }
+        }
+
+        // passed through on x axis
+        if (point.second > std::min(firstPoint.second, secondPoint.second)
+            && point.second < std::max(firstPoint.second, secondPoint.second))
+        {
+            if ((prevPos.lastPoint.first <= std::min(firstPoint.first, secondPoint.first)
+            && point.first >= std::max(firstPoint.first, secondPoint.first))
+            || (point.first <= std::min(firstPoint.first, secondPoint.first)
+            && prevPos.lastPoint.first >= std::max(firstPoint.first, secondPoint.first))) {
+                return false;
+            }
+        }
+
+
         // previously on rim, move out
         if (prevPos.xRight || prevPos.xLeft || prevPos.yTop || prevPos.yBottom)
         {
             if (prevPos.xRight) {
-                if (point.first < std::max(firstPoint.first, secondPoint.first)) {
+                if (point.first < std::max(firstPoint.first, secondPoint.first) && !(prevPos.yTop || prevPos.yBottom)) {
                     return false;
                 }
             }
 
             if (prevPos.xLeft) {
-                if (point.first > std::min(firstPoint.first, secondPoint.first)) {
+                if (point.first > std::min(firstPoint.first, secondPoint.first) && !(prevPos.yTop || prevPos.yBottom)) {
                     return false;
                 }
             }
 
             if (prevPos.yTop) {
-                if (point.second < std::max(firstPoint.second, secondPoint.second)) {
+                if (point.second < std::max(firstPoint.second, secondPoint.second) && !(prevPos.xLeft || prevPos.xRight)) {
                     return false;
                 }
             }
 
             if (prevPos.yBottom) {
-                if (point.second > std::min(firstPoint.second, secondPoint.second)) {
+                if (point.second > std::min(firstPoint.second, secondPoint.second) && !(prevPos.xLeft || prevPos.xRight)) {
                     return false;
                 }
             }
@@ -121,6 +112,7 @@ bool isFilled(std::pair<int, int> firstPoint, std::pair<int, int> secondPoint, s
         prevPos.yTop = false;
         prevPos.xLeft = false;
         prevPos.yBottom = false;
+        prevPos.lastPoint = point;
 
         // outside x range
         // outside y range
@@ -146,32 +138,9 @@ int main() {
         points.push_back(std::make_pair(std::stoi(line.substr(0, line.find(","))), std::stoi(line.substr(line.find(",") + 1))));
     }
 
-    cornerPoints.push_back(minPoint);
-    // initial start direction in x
-    int distanceX = INT_MAX;
 
-    std::pair<int, int> nextPoint = std::make_pair(0,0);
-    for(auto& point : points) {
-        if (point == minPoint) {
-            continue;
-        }
-
-        if (point.second == minPoint.second) {
-            int distance = point.first - minPoint.first;
-            if (distance > 0 && distance < distanceX) {
-                distanceX = distance;
-                nextPoint = point;
-            }
-        }
-    }
-
-    cornerPoints.push_back(nextPoint);
-    
-    // get outer path
-    do
-    {
-        nextPoint = buildArea(nextPoint, cornerPoints, points);
-    } while (nextPoint != minPoint);
+    cornerPoints = points;
+    cornerPoints.push_back(cornerPoints[0]);
 
 
     std::pair<std::pair<int, int>, std::pair<int, int>> bestPoint = std::make_pair(std::make_pair(0,0), std::make_pair(0,0));
@@ -198,3 +167,9 @@ int main() {
 
     return 0;
 }
+
+// 4629483216
+// 4629483216
+// 4600044000
+// 186567246
+// 157191288
