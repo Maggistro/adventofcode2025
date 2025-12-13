@@ -2,8 +2,95 @@
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
+#include <iostream>
+#include <set>
 
 class Machine {
+
+
+    struct JoltageState {
+        int distance;
+        int joltageDifference;
+        int pressed = 0;
+        std::vector<int> joltage;
+
+        void setJoltage(std::vector<int> joltage)
+        {
+            this->joltage = joltage;
+            for (int jolt : joltage) {
+                this->joltageDifference += jolt;
+            }
+        }
+    };
+
+    struct JoltageNode
+    {
+        JoltageState* state;
+        JoltageNode* next;
+        JoltageNode* previous;
+    };
+
+    struct JoltageList {
+        JoltageNode* head = nullptr;
+        JoltageNode* tail = nullptr;
+
+        void insertJoltageState(JoltageState* state)
+        {
+            JoltageNode* iterator = head;
+            JoltageNode* newNode = new JoltageNode{state, nullptr, nullptr};
+            if (head == nullptr) 
+            {
+                head = newNode;
+                tail = newNode;
+                return;
+            }
+
+
+            for (; iterator != nullptr; iterator = iterator->next) 
+            {
+                if (iterator->state->distance >= newNode->state->distance) 
+                {
+                    if (iterator->previous != nullptr) 
+                    {
+                        iterator->previous->next = newNode;
+                        newNode->previous = iterator->previous;
+                        iterator->previous = newNode;
+                        newNode->next = iterator;
+                    } 
+                    else 
+                    {
+                        newNode->next = head;
+                        head->previous = newNode;
+                        head = newNode;
+                    }
+                    break;
+                }
+            }
+
+            if (iterator == nullptr) 
+            {
+                tail->next = newNode;
+                newNode->previous = tail;
+                tail = newNode;
+            }
+        }
+
+        void removeHead()
+        {
+            JoltageNode* oldHead = head;
+            if (head->next != nullptr)
+            {
+                head->next->previous = nullptr;
+                head = head->next;
+            }
+            else
+            {
+                head = nullptr;
+            }
+            delete(oldHead->state);
+            delete(oldHead);
+        }
+    };
 
 private:
     uint16_t targetStateMask;
@@ -50,7 +137,14 @@ public:
     }
 
     long getFewestJoltageButtonPresses() {
-        std::vector<std::vector<int>> currentStates = {joltageRequirements};
+        JoltageState* currentState = new JoltageState();
+        currentState->setJoltage(joltageRequirements);
+        int totalJoltage = currentState->joltageDifference;
+        std::set<std::vector<int>> invalidStates;
+        
+        JoltageList searchRim;
+        searchRim.insertJoltageState(currentState);
+
         std::vector<std::vector<int>> positionTransitions;
         long presses = 1;
 
@@ -71,28 +165,68 @@ public:
 
         while(true) // assuming we get there eventually
         {
-            std::vector<std::vector<int>> nextStates;
-            for (std::vector<int> state : currentStates) {
-                for (std::vector<int> positionTransition : positionTransitions) {
-                    std::vector<int> nextState = state;
-                    for (int position : positionTransition) {
-                        nextState[position] -= 1;
-                        if (nextState[position] < 0) {
-                            nextState = std::vector<int>{};
-                            break;
-                        }
-                    }
-                    if (!nextState.empty() && std::all_of(nextState.begin(), nextState.end(), [](int i) { return i==0; })) {
-                        return presses;
-                    }   
-                    if (!nextState.empty())
-                    {
-                        nextStates.push_back(nextState);                           
+            // create all children
+            bool newStateFound = false;
+            std::vector<JoltageState*> nextStates;
+            for (std::vector<int> positionTransition : positionTransitions) {
+                JoltageState* newState = new JoltageState();
+                std::vector<int> nextJoltages = std::vector<int>(currentState->joltage);
+                int leftOver = 0;
+
+                for (int position : positionTransition) 
+                {
+                    nextJoltages[position] -= 1;
+                    leftOver += nextJoltages[position];
+                    if (nextJoltages[position] < 0) {
+                        nextJoltages = std::vector<int>{};
+                        break;
                     }
                 }
+
+                if (!nextJoltages.empty())
+                {
+                    newState->setJoltage(nextJoltages);
+                    if (invalidStates.find(newState->joltage) != invalidStates.end())
+                    {
+                        delete(newState);
+                        continue;
+                    }
+
+                    newStateFound = true;
+                    newState->pressed = currentState->pressed + 1;
+
+                    if (newState->joltageDifference == 0) 
+                    {
+                        return newState->pressed;
+                    }
+                    
+                    // newState->distance = (newState->joltageDifference * 100)/totalJoltage + newState->pressed * 10;
+                    newState->distance = newState->joltageDifference - leftOver;
+                    // newState->distance = newState->pressed;
+                    // newState->distance = -(currentState->joltageDifference - newState->joltageDifference) 
+                    //                     + newState->pressed * (newState->joltageDifference  - totalJoltage) / totalJoltage;
+
+                    // std::cout << "\nNew state found with distance " << newState->distance << " and pressed " << newState->pressed << " standing at " << newState->joltageDifference << std::endl;
+
+                    nextStates.push_back(newState);
+                }
             }
-            currentStates = nextStates;
-            presses++;
+
+            if (!newStateFound)
+            {
+                invalidStates.insert(currentState->joltage);
+            }
+
+            searchRim.removeHead();
+            if (newStateFound)
+            {
+                for (JoltageState* nextState : nextStates)
+                {
+                    searchRim.insertJoltageState(nextState);
+                }
+            }
+
+            currentState = searchRim.head->state;
         }
     }
 };

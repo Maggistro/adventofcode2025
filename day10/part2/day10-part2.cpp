@@ -6,7 +6,7 @@
 #include <cmath>
 
 int main() {
-    std::fstream in("../test");
+    std::fstream in("../data");
 
     std::vector<std::string> parts;
     std::vector<Machine*> machines;
@@ -55,7 +55,9 @@ int main() {
 
     long fewestButtonPresses = 0;
     for (Machine* machine : machines) {
-        fewestButtonPresses += machine->getFewestJoltageButtonPresses();
+        int presses = machine->getFewestJoltageButtonPresses();
+        fewestButtonPresses += presses;
+        std::cout << "Current fewest button presses: " << presses << std::endl;
     }
 
     std::cout << "Fewest button presses: " << fewestButtonPresses << std::endl;
