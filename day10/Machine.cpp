@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
+#include <unordered_set>
+#include <boost/functional/hash.hpp>
 
 class Machine {
 
@@ -33,6 +35,7 @@ class Machine {
     struct JoltageList {
         JoltageNode* head = nullptr;
         JoltageNode* tail = nullptr;
+        int length = 0;
 
         void insertJoltageState(JoltageState* state)
         {
@@ -42,12 +45,22 @@ class Machine {
             {
                 head = newNode;
                 tail = newNode;
+                length++;
                 return;
             }
 
-
             for (; iterator != nullptr; iterator = iterator->next) 
             {
+                if (iterator->state->pressed == state->pressed
+                    && iterator->state->joltage == state->joltage) 
+                {
+                    return;
+                } 
+            }
+
+            for (iterator = head; iterator != nullptr; iterator = iterator->next) 
+            {
+
                 if (iterator->state->distance >= newNode->state->distance) 
                 {
                     if (iterator->previous != nullptr) 
@@ -73,6 +86,7 @@ class Machine {
                 newNode->previous = tail;
                 tail = newNode;
             }
+            length++;
         }
 
         void removeHead()
@@ -89,6 +103,22 @@ class Machine {
             }
             delete(oldHead->state);
             delete(oldHead);
+            length--;
+        }
+
+        bool exists(JoltageState* state)
+        {
+            JoltageNode* iterator = head;
+            
+            for (; iterator != nullptr; iterator = iterator->next) 
+            {
+                if (iterator->state->pressed == state->pressed
+                    && iterator->state->joltage == state->joltage) 
+                {
+                    return true;
+                } 
+            }
+            return false;
         }
     };
 
@@ -140,10 +170,11 @@ public:
         JoltageState* currentState = new JoltageState();
         currentState->setJoltage(joltageRequirements);
         int totalJoltage = currentState->joltageDifference;
-        std::set<std::vector<int>> invalidStates;
+        std::unordered_set<size_t> invalidStates;
         
         JoltageList searchRim;
         searchRim.insertJoltageState(currentState);
+        currentState->distance = currentState->joltageDifference;
 
         std::vector<std::vector<int>> positionTransitions;
         long presses = 1;
@@ -183,30 +214,49 @@ public:
                     }
                 }
 
+
                 if (!nextJoltages.empty())
                 {
+                    
+                    if (invalidStates.find(boost::hash_range(nextJoltages.begin(), nextJoltages.end())) != invalidStates.end())
+                    {
+                        delete(newState);
+                        continue;
+                    }
+                    
                     newState->setJoltage(nextJoltages);
-                    if (invalidStates.find(newState->joltage) != invalidStates.end())
+
+                    newState->pressed = currentState->pressed + 1;
+
+                    if (searchRim.exists(newState))
                     {
                         delete(newState);
                         continue;
                     }
 
                     newStateFound = true;
-                    newState->pressed = currentState->pressed + 1;
 
                     if (newState->joltageDifference == 0) 
                     {
                         return newState->pressed;
                     }
                     
+                    
+                    int maxLeftPosition = 0;
+                    for (int joltage : newState->joltage) 
+                    {
+                        maxLeftPosition = std::max(maxLeftPosition, joltage);
+                    }
+
                     // newState->distance = (newState->joltageDifference * 100)/totalJoltage + newState->pressed * 10;
-                    newState->distance = newState->joltageDifference - leftOver;
                     // newState->distance = newState->pressed;
+                    // newState->distance = maxLeftPosition;
+                    newState->distance = newState->joltageDifference - leftOver;
                     // newState->distance = -(currentState->joltageDifference - newState->joltageDifference) 
                     //                     + newState->pressed * (newState->joltageDifference  - totalJoltage) / totalJoltage;
 
                     // std::cout << "\nNew state found with distance " << newState->distance << " and pressed " << newState->pressed << " standing at " << newState->joltageDifference << std::endl;
+                    std::cout << "JoltageDifference: " << newState->joltageDifference << std::endl;
 
                     nextStates.push_back(newState);
                 }
@@ -214,7 +264,7 @@ public:
 
             if (!newStateFound)
             {
-                invalidStates.insert(currentState->joltage);
+                invalidStates.insert(boost::hash_range(currentState->joltage.begin(), currentState->joltage.end()));
             }
 
             searchRim.removeHead();
@@ -225,7 +275,6 @@ public:
                     searchRim.insertJoltageState(nextState);
                 }
             }
-
             currentState = searchRim.head->state;
         }
     }
