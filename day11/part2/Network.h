@@ -22,9 +22,11 @@ public:
     void setStartServer(const std::string serverName);
 
     void insertConnection(std::pair<std::string, std::string> connection, std::map<std::pair<std::string, std::string>, int>* map = nullptr, int visitCount = 1);
-    void removeConnection(std::pair<std::string, std::string> connection, std::map<std::pair<std::string, std::string>, int>* map = nullptr);
+    void removeConnection(std::pair<std::string, std::string> connection, std::map<std::pair<std::string, std::string>, int>* map = nullptr, int visitCount = 1);
 
     void mergeConnections();
+
+    unsigned long long findAllWithTarget(std::string target);
 };
 
 #endif // NETWORK_H
