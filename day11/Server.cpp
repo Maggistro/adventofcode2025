@@ -2,62 +2,64 @@
 #include <vector>
 #include <set>
 
-class Server
+#include "Server.h"
+
+Server::Server(std::string name, std::vector<std::string> connections)
 {
-    private:
-        std::vector<std::string> connections;
-        std::string name;
-        bool visited;
-        bool fft;
-        bool dac;
+    this->name = name;
+    this->connections = connections;
+    this->visited = false;
+    this->fft = false;
+    this->dac = false;
+    this->visitCount = 0;
+}
 
-    public:
-        Server(std::string name, std::vector<std::string> connections)
-        {
-            this->name = name;
-            this->connections = connections;
-            this->visited = false;
-            this->fft = false;
-            this->dac = false;
-        }
+std::string Server::getName()
+{
+    return this->name;
+}
 
-        std::string getName()
-        {
-            return this->name;
-        }
+std::vector<std::string> Server::getConnections()
+{
+    return this->connections;
+}
 
-        std::vector<std::string> getConnections()
-        {
-            return this->connections;
-        }
+bool Server::isVisited()
+{
+    return this->visited;
+}
 
-        bool isVisited()
-        {
-            return this->visited;
-        }
+void Server::setVisited(bool visited)
+{
+    this->visited = visited;
+}
 
-        void setVisited(bool visited)
-        {
-            this->visited = visited;
-        }
+bool Server::isFft()
+{
+    return this->fft;
+}
 
-        bool isFft()
-        {
-            return this->fft;
-        }
-        
-        void setFft(bool fft)
-        {
-            this->fft = fft;
-        }
-        
-        bool isDac()
-        {
-            return this->dac;
-        }
+void Server::setFft(bool fft)
+{
+    this->fft = fft;
+}
 
-        void setDac(bool dac)
-        {
-            this->dac = dac;
-        }
-};
+bool Server::isDac()
+{
+    return this->dac;
+}
+
+void Server::setDac(bool dac)
+{
+    this->dac = dac;
+}
+
+int Server::getVisitCount()
+{
+    return this->visitCount;
+}
+
+void Server::incrementVisitCount()
+{
+    this->visitCount++;
+}

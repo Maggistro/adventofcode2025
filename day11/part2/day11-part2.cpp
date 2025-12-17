@@ -3,66 +3,33 @@
 #include <map>
 #include <vector>
 #include <boost/algorithm/string.hpp>
+#include <boost/multiprecision/cpp_int.hpp>  
 #include <set>
 
-#include "../Server.cpp"
+#include "../Server.h"
+#include "Network.h"
 
-int traverseConnection(Server* currentServer, std::map<std::string, Server*>* servers, bool fft, bool dac, std::string target) {
+boost::multiprecision::int128_t findAllConnectionsBetween(std::string start, std::string target, Network* network, std::pair<std::string, std::string> lastNode = std::pair<std::string, std::string>("","")) {
+    if (start == target) {
+        // network->removeConnection(lastNode);
+        return 1;
+    }
 
-    if (currentServer->isVisited())
-    {
-        if (target == "fft" && !fft)
-        {
-            return 1;
-        }
-
-        if (target == "dac" && !dac)
-        {
-            return 1;
-        }
-
+    if (target == "svr") {
+        // network->removeConnection(lastNode);
         return 0;
-        // std::cout << "skipped" << std::endl;
     }
 
-    int pathCount = 0;
-    currentServer->setVisited(true);
-    std::vector<std::string> connections = currentServer->getConnections();
-    for (std::string connection : connections) 
-    {
-        if (connection == target) 
-        {
-            // std::cout << target << (fft && dac ? " true" : " false") << std::endl;
-            // if (fft && dac) {
-            //     pathCount++;
-            // }
-            pathCount++;
-            continue;
+    boost::multiprecision::int128_t count = 0;
+
+    for (const auto& [connection, visitCount] : *network->getConnections()) {
+        const auto& [node1, node2] = connection;
+        if (node2 == target) {
+            count += visitCount * findAllConnectionsBetween(start, node1, network, std::pair<std::string, std::string>(node1, node2));
         }
-
-        if (connection == "out") {
-            continue;
-        }
-
-        bool nextFft = fft || (connection == "fft");
-        bool nextDac = dac || (connection == "dac");
-
-        // Server* server = servers->at(connection);
-        // if (server->isVisited()
-        //     && !nextFft && !nextDac)
-        // {
-            // std::cout << "skipped" << std::endl;
-        //     continue;
-        // }
-
-        // server->setFft(nextFft);
-        // server->setDac(nextDac);
-
-        // std::cout << connection << " ";
-        pathCount += traverseConnection(servers->at(connection), servers, nextFft, nextDac, target);
     }
 
-    return pathCount;
+    return count;
 }
 
 int main() {
@@ -87,66 +54,50 @@ int main() {
 
     Server* currentServer = servers.at("svr");
 
-    // find paths from svr to fft
-    std::string target = "fft";
-    int pathsToFft = traverseConnection(currentServer, &servers, false, false, target);
+    Network* network = new Network();
+    network->setStartServer("svr");
+
+    for (int step = 0; step < 25; step++) {
+        network->step(servers, "fft");
+    }
+
+    network->mergeConnections();
+
+    // // find paths from svr to fft
+    boost::multiprecision::int128_t  pathsToFft = findAllConnectionsBetween("svr", "fft", network);
     std::cout << "Total paths to fft: " << pathsToFft << std::endl;
 
-    for (auto& [name, server] : servers) {
-        server->setVisited(false);
+
+    network = new Network();
+    network->setStartServer("fft");
+
+    for (int step = 0; step < 30; step++) {
+        network->step(servers, "dac");
     }
 
-    // find paths from svr to dac
-    target = "dac";
-    int pathsToDac = traverseConnection(currentServer, &servers, false, false, target);
-    std::cout << "Total paths to dac: " << pathsToDac << std::endl;
+    network->mergeConnections();
 
-    for (auto& [name, server] : servers) {
-        server->setVisited(false);
-    }
-
-    // find paths from fft to dac
-    currentServer = servers.at("fft");
-    target = "dac";
-    int pathsFromFftToDac = traverseConnection(currentServer, &servers, false, false, target);
+    // // find paths from fft to dac
+    boost::multiprecision::int128_t  pathsFromFftToDac = findAllConnectionsBetween("fft", "dac", network);
     std::cout << "Total paths from fft to dac: " << pathsFromFftToDac << std::endl;
 
-    for (auto& [name, server] : servers) {
-        server->setVisited(false);
+
+    network = new Network();
+    network->setStartServer("dac");
+
+    for (int step = 0; step < 25; step++) {
+        network->step(servers, "out");
     }
 
-    // find paths from dac to fft
-    currentServer = servers.at("dac");
-    target = "fft";
-    int pathsFromDacToFft = traverseConnection(currentServer, &servers, false, false, target);
-    std::cout << "Total paths from dac to fft: " << pathsFromDacToFft << std::endl;
+    network->mergeConnections();
 
-    for (auto& [name, server] : servers) {
-        server->setVisited(false);
-    }
-
-    // find paths from fft to out
-    currentServer = servers.at("fft");
-    target = "out"; 
-    int pathsFromFftToOut = traverseConnection(currentServer, &servers, false, false, target);
-    std::cout << "Total paths from fft to out: " << pathsFromFftToOut << std::endl;
-
-    for (auto& [name, server] : servers) {
-        server->setVisited(false);
-    }
-
-    // find paths from dac to out
-    currentServer = servers.at("dac");  
-    target = "out";
-    int pathsFromDacToOut = traverseConnection(currentServer, &servers, false, false, target);
+    // // find paths from dac to out
+    boost::multiprecision::int128_t  pathsFromDacToOut = findAllConnectionsBetween("dac", "out", network);
     std::cout << "Total paths from dac to out: " << pathsFromDacToOut << std::endl;
 
-    long long totalPaths = 
-        (pathsToFft * pathsFromFftToDac * pathsFromDacToOut) +
-        (pathsToDac * pathsFromDacToFft * pathsFromFftToOut) +
-        (pathsToDac * pathsFromDacToFft * pathsFromFftToDac * pathsFromDacToOut) + 
-        (pathsToDac * pathsFromFftToDac * pathsFromDacToFft * pathsFromDacToOut);
-
+    boost::multiprecision::int128_t  firstHalf = pathsToFft * pathsFromFftToDac;
+    std::cout << "First half: " << firstHalf << std::endl;
+    boost::multiprecision::int128_t  totalPaths = firstHalf * pathsFromDacToOut;
     std::cout << "Total paths: " << totalPaths << std::endl;
 
 }
